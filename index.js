@@ -6,9 +6,6 @@ const LANGS_FILEPATH = "/home/kyle/bin/wakawidget/out/langs.txt";
 const TODAY_FILEPATH = "/home/kyle/bin/wakawidget/out/today.txt";
 const KEY_FILEPATH = "/home/kyle/.wakatime.cfg";
 
-fs.writeFileSync(TOTAL_FILEPATH, "");
-fs.writeFileSync(LANGS_FILEPATH, "");
-fs.writeFileSync(TODAY_FILEPATH, "");
 
 let rawKey = fs.readFileSync(KEY_FILEPATH).toString();
 rawKey = rawKey.split("= ")[1].split("\n")[0];
@@ -24,51 +21,73 @@ let axiosInstance = axios.create({
   },
 });
 
+const OPTION = process.argv[2]
+
 const main = async () => {
-  // get week
-  let stats = await axiosInstance
-    .get("https://wakatime.com/api/v1/users/current/stats/last_7_days")
-    .then((res) => res.data)
-    .then((data) => {
-      return data;
-    })
-    .catch((err) => {
-      fs.writeFileSync("wakawidget: something went wrong.");
-      process.exit(1);
-    });
+  if (OPTION == '--week') {
+    // get week
+    axiosInstance
+      .get(
+        "https://wakatime.com/api/v1/users/current/stats/last_7_days",
+        {
+          timeout: 20000,
+        }
+      )
+      .then((res) => res.data)
+      .then((res) => {
+        const result = (res.data.total_seconds_including_other_language / 3600).toFixed(3)
+        fs.writeFileSync(TOTAL_FILEPATH, "");
+        fs.appendFileSync(
+          TOTAL_FILEPATH,
+          result
+        );
+        console.log(result)
 
-  fs.appendFileSync(
-    TOTAL_FILEPATH,
-    (stats.data.total_seconds_including_other_language / 3600).toFixed(3)
-  );
+        // langs
+        for (let i = 0; i < 3; i++) {
+          let cur = res.data.languages[i];
+          let str = parseInt(cur.percent);
+          if (cur.name == "Other") {
+            str += "~";
+          } else {
+            str += cur.name[0];
+          }
+          fs.writeFileSync(LANGS_FILEPATH, "");
+          fs.appendFileSync(LANGS_FILEPATH, str + " ");
+        }
+      })
+      .catch((err) => {
+        // fs.writeFileSync("wakawidget: something went wrong.");
+        console.log('err')
+        process.exit(0)
+      });
 
-  for (let i = 0; i < 3; i++) {
-    let cur = stats.data.languages[i];
-    let str = parseInt(cur.percent);
-    if (cur.name == "Other") {
-      str += "~";
-    } else {
-      str += cur.name[0];
-    }
-    fs.appendFileSync(LANGS_FILEPATH, str + " ");
   }
 
-  // get today
-  let today = await axiosInstance.get(
-    "https://wakatime.com/api/v1/users/current/durations",
-    {
-      params: {
-        date: new Date().toISOString().split("T")[0],
-      },
-    }
-  );
+  if (OPTION == '--today') {
+    // get today
+    let today = await axiosInstance.get(
+      "https://wakatime.com/api/v1/users/current/durations",
+      {
+        timeout: 20000,
+        params: {
+          date: new Date().toISOString().split("T")[0],
+        },
+      }
+    ).catch(err => {
+      console.log('err')
+      process.exit(0)
+    });
 
-  let sum = today.data.data.reduce((acc, b) => {
-    return acc + b.duration;
-  }, 0);
+    let sum = today.data.data.reduce((acc, b) => {
+      return acc + b.duration;
+    }, 0);
 
-  let todayStr = (sum / 3600).toFixed(3);
-  fs.appendFileSync(TODAY_FILEPATH, todayStr);
+    let todayStr = (sum / 3600).toFixed(3);
+    fs.writeFileSync(TODAY_FILEPATH, "");
+    fs.appendFileSync(TODAY_FILEPATH, todayStr);
+    console.log(todayStr)
+  };
 };
 
 main();
