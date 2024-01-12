@@ -3,9 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "scripts": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vxsl/wakawidget.git"
@@ -17,6 +15,6 @@
   },
   "homepage": "https://github.com/vxsl/wakawidget#readme",
   "dependencies": {
-    "axios": "^0.21.1"
+    "axios": "^1.6.5"
   }
 }
