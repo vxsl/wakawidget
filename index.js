@@ -2,20 +2,19 @@ const fs = require("fs");
 const axios = require("axios");
 
 const TMP_DIR = "./.tmp";
-
 const WEEK_PATH = `${TMP_DIR}/week.txt`;
 const WEEK_LANGS_PATH = `${TMP_DIR}/week-langs.txt`;
 const TODAY_PATH = `${TMP_DIR}/today.txt`;
 const KEY_FILEPATH = `${process.env.HOME}/.wakatime.cfg`;
 
+// how many languages to show in week-langs
 const NUM_LANGS = 3
 
+// get api key from wakatime config file, and setup axios instance with basic auth
 let rawKey = fs.readFileSync(KEY_FILEPATH).toString();
 rawKey = rawKey.split("= ")[1].split("\n")[0];
-
 let buff = new Buffer.from(rawKey, "utf8");
 let base64key = buff.toString("base64");
-
 let axiosInstance = axios.create({
   headers: {
     get: {
@@ -24,6 +23,15 @@ let axiosInstance = axios.create({
   },
 });
 
+// ensure tmp dir and output files exist
+if (!fs.existsSync(TMP_DIR)) {
+  fs.mkdirSync(TMP_DIR);
+}
+[WEEK_PATH, WEEK_LANGS_PATH, TODAY_PATH].forEach(path => {
+  fs.writeFileSync(path, "", { flag: "a" });
+})
+
+// print content of output files if passed argument "week" | "today" | "week-langs"
 const option = process.argv[2];
 if (option) {
   switch (option) {
@@ -40,11 +48,8 @@ if (option) {
   return
 }
 
+// query wakatime api and write to output files if no argument passed
 const query = async () => {
-  if (!fs.existsSync(TMP_DIR)) {
-    fs.mkdirSync(TMP_DIR);
-  }
-
   // get week
   axiosInstance
     .get(
@@ -77,7 +82,7 @@ const query = async () => {
     })
 
   // get today
-  let today = await axiosInstance.get(
+  axiosInstance.get(
     "https://wakatime.com/api/v1/users/current/durations",
     {
       timeout: 20000,
@@ -85,15 +90,14 @@ const query = async () => {
         date: new Date().toISOString().split("T")[0],
       },
     }
-  )
-
-  let sum = today.data.data.reduce((acc, b) => {
-    return acc + b.duration;
-  }, 0);
-
-  let todayStr = (sum / 3600).toFixed(3);
-  fs.writeFileSync(TODAY_PATH, "");
-  fs.appendFileSync(TODAY_PATH, todayStr);
+  ).then(res => res.data).then(d => {
+    const sum = d.data.reduce((acc, b) => {
+      return acc + b.duration;
+    }, 0)
+    const todayStr = (sum / 3600).toFixed(3);
+    fs.writeFileSync(TODAY_PATH, "");
+    fs.appendFileSync(TODAY_PATH, todayStr);
+  })
 };
 
 query().catch(err => {
