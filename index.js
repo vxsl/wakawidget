@@ -65,8 +65,12 @@ const query = async () => {
 
       // langs
       fs.writeFileSync(WEEK_LANGS_PATH, "");
-      for (let i = 0; i < NUM_LANGS; i++) {
-        let cur = res.data.languages[i];
+      for (
+        let i = 0;
+        i < Math.min(3, (res.data?.languages ?? []).length);
+        i++
+      ) {
+        let cur = res.data?.languages?.[i];
         let str = parseInt(cur.percent);
         if (cur.name == "Other") {
           str += "~";
