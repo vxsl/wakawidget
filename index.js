@@ -104,6 +104,7 @@ const query = async () => {
 };
 
 query().catch((err) => {
+  console.error(err);
   fs.appendFileSync("error.log", err);
-  process.exit(1);
+  process.exit(0);
 });
